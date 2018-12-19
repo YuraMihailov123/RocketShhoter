@@ -1,9 +1,10 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Networking;
+using UnityEngine.UI;
 
-
-public class MyController : MonoBehaviour {
+public class MyController : NetworkBehaviour {
 	public float[] DataX = new float[3];
 	public float[] DataY= new float[3];
     public float[] velX = new float[3];
@@ -14,22 +15,84 @@ public class MyController : MonoBehaviour {
     public float[] y_array= new float[100];
     public Vector3[] xyz = new Vector3[100];
     public Vector3[] circle=new Vector3[36];
-    public float t;
+    public float t,delay;
     public GameObject bullet,spawn;
     public Vector3 dirBull;
-    public float speedBull;
+    public float speedBull = 40;
     GameObject bullet_ = null;
     ///public GameObject[] Tool;
     ///
     public GameObject bb;
     public string nameTool="";
+    public bool firstFire=true;
+    public GameObject[] toHide = new GameObject[4];
+    public GameObject[] toAA = new GameObject[3];
+    public InputField x, y;
+    public GameObject toolSp;
+    public GameObject[] tranTemp;
+    public Transform[] tran;
     void Start(){
+        GameObject.Find("NetworkObject").GetComponent<NetworkManager>().startPositions.Clear();
+        //Transform tran=null;
+
+        //tran.position = new Vector3(0, 26, 0);
+        tranTemp = GameObject.FindGameObjectsWithTag("Spawn");
+        for (int i = 0; i < tranTemp.Length; i++)
+        {
+            tran[i] = tranTemp[i].transform;
+            GameObject.Find("NetworkObject").GetComponent<NetworkManager>().startPositions.Add(tran[i]);
+        }
+
+
+
+
+        Debug.Log(GameObject.Find("NetworkObject").GetComponent<NetworkManager>().startPositions.Count);
+        //Debug.Log(GameObject.Find("NetworkObject").GetComponent<NetworkManager>().startPositions[0].position);
+        toAA[0] = GameObject.Find("x");
+        toAA[1] = GameObject.Find("y");
+        toAA[2] = GameObject.Find("spawn");
+        toHide[0] = GameObject.Find("InputField");
+        toHide[1] = GameObject.Find("InputField (1)");
+        toHide[2] = GameObject.Find("Button");
+        toHide[3] = GameObject.Find("Button (1)");
+        firstFire = true;
         //Time.timeScale = 0.14f;
+        speedBull = 40;
+        if (isServer)
+        {
+            for (int i = 0; i < 4; i++)
+                toHide[i].SetActive(true);
+
+            for (int i = 0; i < 3; i++)
+                toAA[i].SetActive(false);
+
+        }
+        else
+        {
+            for (int i = 0; i < 4; i++)
+                toHide[i].SetActive(false);
+
+            for (int i = 0; i < 3; i++)
+                toAA[i].SetActive(true);
+        }
     }
     // Update is called once per frame
     void Update () {
+
+
+        if (delay > 0) {
+            delay -= Time.deltaTime;
+        }
+        if (delay < 0 && firstFire)
+        {
+            bullet_ = Instantiate(bullet, spawn.transform.position, Quaternion.identity);
+            NetworkServer.Spawn(bullet_);
+            firstFire = false;
+        }
+        //if(bullet_.transform.position.y==dirBull.y)
         if (bullet_ != null)
         {
+
             bullet_.transform.position += (dirBull - bullet_.transform.position).normalized * speedBull * Time.deltaTime;
         }
         //DrawCircle();
@@ -76,12 +139,11 @@ public class MyController : MonoBehaviour {
     }
     public void Fire(float t,float y0, float x0, double vx, double a)
     {
-        int v0 = 30;
         float y_max = y_array[0],y_m=0,x_max=0;
-        float dist = 0,time=0;
+        float dist = 0;
         int index = 0;
         GameObject rocket = GameObject.Find("Rocket");
-        for (int i = 1; i < y_array.Length; i++)
+        for (int i = 0; i < y_array.Length; i++)
         {
             if (y_max < y_array[i])
             {
@@ -89,38 +151,51 @@ public class MyController : MonoBehaviour {
                 index = i;
             }
         }
-        x_max = x_array[index];
-        if (y0 >= y_max )
+        y_m = y_max;
+        for (int i = 1; i < y_array.Length; i++)
         {
-            y_m = y0 / 2;
-            for (int i = 1; i < y_array.Length - 1; i++)
+            y_m /= 2;
+            for (int j = 0; j < y_array.Length - 1; j++)
             {
-
-                if (y_m > y_array[i] && y_m < y_array[i + 1])
+                if (y_m > y_array[j + 1] && y_m < y_array[j])
                 {
-                    y_m = y_array[i];
-                    index = i;
+                    Debug.Log("fuckinDuckin");
+                    y_m = y_array[j];
+                    x_max = x_array[j];
                 }
             }
-            x_max = x_array[index];
-            //find y between two numbers of array i&i+1
-            Debug.Log("1");
+            dist = Vector3.Distance(spawn.transform.position, new Vector3(x_max, y_m, 0));
+            float time_rocket = (float)(Mathf.Abs(x0 - x_max) / vx);
+            float time_bullet = dist / speedBull;
+            Debug.Log(x_max+"--");
+            if (time_rocket >= time_bullet)
+            {
+                dirBull = new Vector3(x_max, y_m, 0);
+                delay = time_rocket - time_bullet;
+                break;
+            }
+            else
+            {
+                continue;
+            }
         }
-        else if (y0 < y_max )
-        {
-            y_m = y_max;
-            x_max = x_array[index];//main case when the rocket is under the tool. need to be f*kicng fixeddd
-            Debug.Log("2");
-        }      
-
-        time = (float)(Mathf.Abs(x0-x_max) / vx);
-        //Debug.Log(y0+"-"+y_m + ":" + x_max+"Time rocket:"+time+"velx"+vx+"full time"+t);
-        dist = Vector3.Distance(spawn.transform.position, new Vector3(x_max,y_m,0));
-        speedBull = (dist / time);
-        Debug.Log(x_max + ":" + y_m + "->" + dist+"->"+speedBull+"->"+time+"Speed"+vx+"x0:"+x0+"y0"+y0);
-        bullet_= Instantiate(bullet, spawn.transform.position, Quaternion.identity);
-        //bullet_.GetComponent<Rigidbody2D>().AddForce(new Vector2(x_max, y_m)*15, ForceMode2D.Force);
-        dirBull = new Vector3(x_max, y_m, 0);
-        //if ((targetBox.position - transform.position).sqrMagnitude < 0.01f) Destroy(gameObject);
     }
+    public void SpawnTool()
+    {
+        if (isServer) return;
+
+        float xt, yt;
+        xt = float.Parse(x.text);
+        yt = float.Parse(y.text);
+        var temp = Instantiate(toolSp, new Vector3(xt, yt, 0), Quaternion.identity);
+
+        //NetworkServer.Spawn(temp);
+        //Network.Connect("localhost", 7777);
+        //RegisterHostMessage msg = new RegisterHostMessage();
+
+        //msg.x = xt;
+        //msg.y = yt;
+        //cl.Send(RegisterHostMsgId, msg);
+    }
+
 }

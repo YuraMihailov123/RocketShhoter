@@ -1,14 +1,43 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Networking;
+using UnityEngine.UI;
 
-public class Tool : MonoBehaviour {
-	public MyController controller;
-	public bool getData = false;
+public class Tool : NetworkBehaviour{
+    public MyController controller;
+    public bool getData = false;
 	public float timeDelay;
 	public float x_t, y_t,velX,velY;
-	void Start(){
 
+    //public Text test;
+    void Start(){
+
+        //toHide = GameObject.FindGameObjectsWithTag("Hide");
+        //for (int i = 0;i<)
+
+        //for (int i = 0; i < 3; i++)
+            //toAA[i].SetActive(false);
+        controller = GameObject.Find("Controller").GetComponent<MyController>();
+        Debug.Log(isServer+gameObject.name);
+        //test.text = "";
+        //test.text = isLocalPlayer.ToString();
+        if (isServer)
+        {
+            for (int i = 0; i < 4; i++)
+                controller.toHide[i].SetActive(true);
+
+            for (int i = 0; i < 3; i++)
+                controller.toAA[i].SetActive(false);
+
+        }
+        else {
+            for (int i = 0; i < 4; i++)
+                controller.toHide[i].SetActive(false);
+
+            for (int i = 0; i < 3; i++)
+                controller.toAA[i].SetActive(true);
+        }
 		timeDelay = 0;
 	}
 	void Update(){

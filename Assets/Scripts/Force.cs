@@ -4,26 +4,36 @@ using UnityEngine;
 using UnityEngine.UI;
 using System;
 using UnityEngine.SceneManagement;
+using UnityEngine.Networking;
 
-public class Force : MonoBehaviour {
+public class Force : NetworkBehaviour {
 	public InputField inpField,inpSpeed;
+  
     public float angle;
     public float speed;
+    public GameObject loseText;
     private Rigidbody2D rgb2;
+
+    [SyncVar]
     public bool gamePlay = false;
-	// Use this for initialization
-	void Start () {
+
+
+    // Use this for initialization
+    void Start () {
+        Time.timeScale = 0.5f;
         rgb2 = GetComponent<Rigidbody2D>();
 		rgb2.bodyType = RigidbodyType2D.Static;
-        gamePlay = false;		
+        gamePlay = false;	
+
 	}
 	
 	// Update is called once per frame
 	void Update () {
-        
+
+
         string a = inpField.text;
       
-        if (a != "" && a!="-")
+        if (a != "" && a!="-" )
         {
             angle = float.Parse(a);
             angle = angle * Mathf.PI / 180;
@@ -46,6 +56,7 @@ public class Force : MonoBehaviour {
         if (gamePlay)
             transform.Rotate(0, 0, -Time.deltaTime * speed);
 
+
     }
     public void Play()
     {
@@ -64,6 +75,11 @@ public class Force : MonoBehaviour {
             rgb2.bodyType = RigidbodyType2D.Static;
             gamePlay = false;
         }
+        if (col.name == "Bullet(Clone)") 
+        {
+            loseText.SetActive(true);
+            Time.timeScale = 0;
+        }
     }
-    
+
 }
